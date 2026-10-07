@@ -19,7 +19,7 @@ Most portfolio anomaly-detection projects stop at "trained a model." This one is
 - **Sample:** 300 randomly sampled vessels (by MMSI) → 5,185,360 pings
 - **Storage:** Loaded into PostgreSQL (`maritime_ais` database, table `ais_data`)
 
-The monthly extracts, the 300-vessel sample, and the SQL feature export are several gigabytes combined, so they are listed in `.gitignore` and are not part of this repository. They stay in `data/` locally because the notebook and `scripts/1.py` read them from there. See [Repository layout](#repository-layout).
+The monthly extracts, the 300-vessel sample, and the SQL feature export are several gigabytes combined, so they are listed in `.gitignore` and are not part of this repository. See [Repository layout](#repository-layout) for what's included and how to regenerate what isn't.
 
 ## Layer 1 — SQL Feature Engineering & Rule-Based Detection
 
@@ -42,14 +42,16 @@ Built entirely in PostgreSQL using chained CTEs (`sql/AIS_DIST_TIME_DIFF.sql`):
 
 ## Layer 2 — LSTM-Autoencoder (Unsupervised Detection)
 
-Trained in `notebooks/1.ipynb`:
+Built and trained in `notebooks/lstm_anomaly_detection.ipynb`:
 
 - **Architecture:** Encoder LSTM (32 units) → bottleneck → `RepeatVector` → Decoder LSTM → `TimeDistributed(Dense)`, trained in TensorFlow/Keras
 - **Input:** 50-ping sequences per vessel, 6 scaled features (lat, lon, course over ground, speed, log time gap, log distance)
 - **Training:** reconstruction target is the input itself (`X, X`), Adam at learning rate `0.0001`, MSE loss, early stopping on validation loss (patience 5, up to 200 epochs, batch size 64)
 - **Anomaly score:** per-sequence reconstruction error (MSE)
 
-The saved weights are `models/ais_lstm_autoencoder.keras`. Sequence scores used by the dashboard are in `data/ais_anomaly_results.csv` (MMSI, time window, anomaly score, rank, and a representative lat/lon).
+The notebook loads its data and model via relative paths (`../data/gulf_features.csv`, `../models/ais_lstm_autoencoder.keras`), so it runs as-is once the repo is cloned and `gulf_features.csv` has been regenerated (see [Setup](#setup)). The saved weights are `models/ais_lstm_autoencoder.keras`. Sequence scores used by the dashboard are in `data/ais_anomaly_results.csv` (MMSI, time window, anomaly score, rank, and a representative lat/lon).
+
+The notebook's training cell is shown as a documented, non-executing code block rather than a live cell — re-running training produces a different model (random weight initialization) than the one actually validated below it. To retrain from scratch, copy that block into a live cell and run it; otherwise the notebook loads the already-trained, saved model for all downstream scoring.
 
 ### Data quality issues found and fixed
 
@@ -99,12 +101,12 @@ The dashboard shows:
 | `sql/meritime_ais.session.sql` | `CREATE TABLE ais_data` for the PostgreSQL load |
 | `sql/AIS_DIST_TIME_DIFF.sql` | Rule-based feature engineering, anomaly flags, and severity ranking |
 | `sql/LSTM_INPUT_DATA.sql` | Per-ping numeric feature query exported to `data/gulf_features.csv` |
-| `notebooks/1.ipynb` | Sequence building, scaling, LSTM-autoencoder training |
-| `models/ais_lstm_autoencoder.keras` | Saved model |
+| `notebooks/lstm_anomaly_detection.ipynb` | Sequence building, scaling, LSTM-autoencoder architecture, training reference, scoring |
+| `models/ais_lstm_autoencoder.keras` | Saved trained model |
 | `data/ais_anomaly_results.csv` | Scored sequences (included; about 12 MB) |
 | `dashboard/DL project.pbix` | Power BI dashboard |
 | `docs/maritime-vessel-anomaly-dashboard.jpg` | Dashboard screenshot used above |
-| `scripts/1.py` | Earlier sampler: vessels with at least 50 pings, draw of 8,000, written to `data/gulf_ais_sample.csv`. The analysis above uses the separate 300-vessel Gulf sample |
+| `scripts/1.py` | Earlier sampler: vessels with at least 50 pings, draw of 8,000, written to `data/gulf_ais_sample.csv`. The analysis above uses the separate 300-vessel Gulf sample, not this script's output |
 | `requirements.txt` | Package versions used to build the project |
 
 Not committed, because they exceed GitHub's 100 MB file limit:
@@ -115,7 +117,7 @@ Not committed, because they exceed GitHub's 100 MB file limit:
 | `data/Gulf_ais_feb.csv` | 1.6 GB | February Gulf extract |
 | `data/Gulf_ais_march.csv` | 1.6 GB | March Gulf extract |
 | `data/gulf_ais_sample.csv` | 324 MB | Output of `scripts/1.py` |
-| `data/gulf_features.csv` | 519 MB | SQL feature export read by `notebooks/1.ipynb` |
+| `data/gulf_features.csv` | 519 MB | SQL feature export read by `notebooks/lstm_anomaly_detection.ipynb` |
 | `tf_env/` | 1.6 GB | Local virtual environment |
 
 ## Setup
@@ -135,7 +137,7 @@ Rebuild path, in order:
 2. Load the 300-vessel sample into `ais_data` using the column definitions in `sql/meritime_ais.session.sql`. Helpful indexes used during the project: `(mmsi, base_datetime)` and `(id)`.
 3. Run `sql/LSTM_INPUT_DATA.sql` and export the result as `data/gulf_features.csv` (`psql \copy` was used; a GUI export was too slow at 5 million rows).
 4. Run `sql/AIS_DIST_TIME_DIFF.sql` for the rule-based severity ranking.
-5. Open `notebooks/1.ipynb`. It reads `gulf_features.csv` from `C:/Users/neilg/Desktop/New_folder/vs_code/ais/data/gulf_features.csv`. Training writes a model you can compare with `models/ais_lstm_autoencoder.keras`.
+5. Open `notebooks/lstm_anomaly_detection.ipynb` from inside the `notebooks/` folder — it reads `../data/gulf_features.csv` and `../models/ais_lstm_autoencoder.keras` as relative paths, so it runs as-is once step 3 has produced `gulf_features.csv` locally. Training is shown as a documented reference block, not a live cell; the notebook loads the already-trained `models/ais_lstm_autoencoder.keras` for scoring, so results stay reproducible without retraining.
 6. Open `dashboard/DL project.pbix` in Power BI. The scored table it presents is `data/ais_anomaly_results.csv`.
 
 Rankings move slightly between training runs. Treat the checked-in scores and the saved `.keras` file as the run behind the dashboard.
