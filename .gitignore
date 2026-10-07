@@ -1,0 +1,21 @@
+# Local TensorFlow environment (about 1.6 GB; reinstall from requirements.txt)
+tf_env/
+
+# Source and feature extracts. GitHub rejects files over 100 MB.
+data/Gulf_ais_jan.csv
+data/Gulf_ais_feb.csv
+data/Gulf_ais_march.csv
+data/gulf_ais_sample.csv
+data/gulf_features.csv
+
+# Python / Jupyter
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# OS and editor
+.DS_Store
+Thumbs.db
+.vscode/
+.env
+*.env
