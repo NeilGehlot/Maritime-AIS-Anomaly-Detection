@@ -106,7 +106,6 @@ The dashboard shows:
 | `docs/maritime-vessel-anomaly-dashboard.jpg` | Dashboard screenshot used above |
 | `scripts/1.py` | Earlier sampler: vessels with at least 50 pings, draw of 8,000, written to `data/gulf_ais_sample.csv`. The analysis above uses the separate 300-vessel Gulf sample |
 | `requirements.txt` | Package versions used to build the project |
-| `docs/temp_README_FILE.md` | Working notes on what each SQL CTE does |
 
 Not committed, because they exceed GitHub's 100 MB file limit:
 
