@@ -16,11 +16,16 @@ with datestamps as (
 ),
 
 time_diff as
-    (select a.id,a.mmsi,dt.ping_sequence,dt.previos_ping_time,a.base_datetime,
-    (extract(epoch from (dt.base_datetime - dt.previos_ping_time))/60)
+    (select a.id,
+            a.mmsi,
+            dt.ping_sequence,
+            dt.previos_ping_time,
+            a.base_datetime,
+            (extract(epoch from (dt.base_datetime - dt.previos_ping_time))/60)
      as time_difference
     from ais_data a 
-     join datestamps dt on a.id = dt.id
+     join datestamps dt 
+     on a.id = dt.id
     ) ,
 
 gap_fl as
@@ -64,12 +69,16 @@ anomaly as (
 ),
 
 speed_anomaly_flag as (
-select * ,
-case when speed_diff >5 then 'Anomaly'
-    else 'normal' end as speed_anomaly
-from anomaly
-where  speed_diff >0 and speed_diff is not NULL and sog>5 
-order by speed_diff DESC
+    select * ,
+    case when speed_diff >5 
+            then 'Anomaly'
+            else 'normal' 
+        end as speed_anomaly
+    from anomaly
+    where   speed_diff >0 and 
+            speed_diff is not NULL and 
+            sog>5 
+    order by speed_diff DESC
 ),
 
 count_speed_anomaly as(
